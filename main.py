@@ -9,12 +9,11 @@ Usage:
     python main.py
 """
 
+import os
 import torch
-from torchvision import datasets, transforms
-from torch.utils.data import DataLoader
-
 from config import *
 from models.cnn import BaselineCNN
+from data.cifar10_parquet import get_dataloaders
 from train import train
 from attacks.fgsm import fgsm_attack
 from attacks.pgd import pgd_attack
@@ -27,8 +26,11 @@ def phase1_train_baseline():
     Phase 1: Train baseline CNN on CIFAR-10.
     Save checkpoint to checkpoints/baseline.pth
     """
-    # TODO: Load data, create model, train, save
-    pass
+    train_loader, test_loader = get_dataloaders(PARQUET_DATA_ROOT, BATCH_SIZE)
+    model = BaselineCNN(num_classes=NUM_CLASSES).to(DEVICE)
+    model, history = train(train_loader, test_loader, model=model, device=DEVICE)
+    torch.save(model.state_dict(), os.path.join(CHECKPOINT_DIR, "baseline.pth"))
+    return model
 
 
 def phase2_attack_baseline():

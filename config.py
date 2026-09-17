@@ -4,6 +4,7 @@ Contains all hyperparameters and paths.
 """
 
 import os
+import torch
 
 # Paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -12,6 +13,7 @@ CHECKPOINT_DIR = os.path.join(BASE_DIR, "checkpoints")
 RESULTS_DIR = os.path.join(BASE_DIR, "results")
 
 # Dataset
+PARQUET_DATA_ROOT = os.path.join(BASE_DIR, "data", "cifar10")
 DATASET = "CIFAR-10"
 NUM_CLASSES = 10
 IMG_SIZE = 32
@@ -37,4 +39,4 @@ ADV_TRAIN_EPSILON = 0.03
 ADV_TRAIN_EPOCHS = 50
 
 # Device
-DEVICE = "cuda"  # use "cuda" if GPU available, else "cpu"
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"

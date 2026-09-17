@@ -10,9 +10,13 @@ This is a fast but relatively weak attack.
 """
 
 import torch
+from models.cnn import BaselineCNN
+from torch.optim import Adam
+from config import *
+from torch.nn import CrossEntropyLoss
 
 
-def fgsm_attack(model, images, labels, epsilon, criterion):
+def fgsm_attack(images, labels, model=None, optimizer=None, epsilon=FGSM_EPSILON, criterion=None):
     """
     Generate adversarial examples using FGSM.
 
@@ -26,14 +30,30 @@ def fgsm_attack(model, images, labels, epsilon, criterion):
     Returns:
         adversarial images (tensor)
     """
+    if model is None:
+        model = BaselineCNN(num_classes=NUM_CLASSES)
+    if optimizer is None:
+        optimizer = Adam(model.parameters(), lr=LEARNING_RATE)
+    if criterion is None:
+        criterion = CrossEntropyLoss()
+
 
     # Set images to require gradient
     images = images.detach().requires_grad_(True)
 
     # TODO: Forward pass - get model predictions
+    output = model(images)
+
     # TODO: Compute loss
+    loss = criterion(output, labels)
+
     # TODO: Backward pass - compute gradients
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+
     # TODO: Collect gradient of loss w.r.t. input images
+
     # TODO: Create adversarial example: x_adv = x + epsilon * sign(gradient)
     # TODO: Clip adversarial images to valid range [0, 1]
 
