@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Data
+data/
+
+# Checkpoints
+checkpoints/*.pth
+
+# Results
+results/*.png
+results/*.csv
+
+# IDE
+.vscode/
+.idea/
