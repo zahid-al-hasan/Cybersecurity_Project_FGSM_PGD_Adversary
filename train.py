@@ -13,26 +13,29 @@ from tqdm import tqdm
 from models.cnn import BaselineCNN
 from dataset_loader import get_dataloaders
 from config import *
+from utils.metrics import evaluate
 
 
-def evaluate(model, test_loader, criterion, device):
-    model.eval()
-    total_loss = 0
-    correct = 0
-    total = 0
+# def evaluate(model, test_loader, criterion, device):
+#     model.eval()
+#     total_loss = 0
+#     correct = 0
+#     total = 0
 
-    with torch.no_grad():
-        for images, labels in test_loader:
-            images, labels = images.to(device), labels.to(device)
-            output = model(images)
-            loss = criterion(output, labels)
+#     with torch.no_grad():
+#         for images, labels in test_loader:
+#             images, labels = images.to(device), labels.to(device)
+#             output = model(images)
+#             loss = criterion(output, labels)
 
-            total_loss += loss.item() * labels.size(0)
-            predicted = output.argmax(dim=1)
-            correct += (predicted == labels).sum().item()
-            total += labels.size(0)
+#             total_loss += loss.item() * labels.size(0)
+#             predicted = output.argmax(dim=1)
+#             correct += (predicted == labels).sum().item()
+#             total += labels.size(0)
 
-    return total_loss / total, 100.0 * correct / total
+#     if total == 0:
+#         return 0.0, 0.0
+#     return total_loss / total, 100.0 * correct / total
 
 
 def train(train_loader, test_loader, model=None, optimizer=None,

@@ -50,16 +50,15 @@ def fgsm_attack(images, labels, model=None, optimizer=None, epsilon=FGSM_EPSILON
     # TODO: Backward pass - compute gradients
     optimizer.zero_grad()
     loss.backward()
-    optimizer.step()
+    # optimizer.step()
 
     # TODO: Collect gradient of loss w.r.t. input images
     gradient = images.grad
 
     # TODO: Create adversarial example: x_adv = x + epsilon * sign(gradient)
-    grad_sign = gradient/abs(gradient) if gradient != 0 else 0
-    adv_images = images + epsilon * grad_sign
+    adv_images = images + epsilon * gradient.sign()
 
     # TODO: Clip adversarial images to valid range [0, 1]
     adv_images = torch.clamp(adv_images, 0, 1)
 
-    pass
+    return adv_images

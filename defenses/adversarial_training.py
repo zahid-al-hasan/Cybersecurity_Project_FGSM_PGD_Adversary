@@ -7,13 +7,14 @@ Adversarial training augments the training data with adversarial examples
 generated during each epoch, forcing the model to learn robust features.
 """
 
-import torch
+import torch, tqdm
 import torch.nn as nn
 from attacks.pgd import pgd_attack
+from utils.metrics import evaluate
 
 
-def adversarial_training(model, train_loader, test_loader, optimizer, scheduler,
-                         device, epsilon, alpha, pgd_steps, num_epochs):
+
+def adversarial_training(model, train_loader, test_loader, optimizer, scheduler, device, epsilon, alpha, pgd_steps, num_epochs):
     """
     Train a model with PGD adversarial examples.
 
@@ -37,10 +38,11 @@ def adversarial_training(model, train_loader, test_loader, optimizer, scheduler,
     Returns:
         trained model, history dict with train/test losses and accuracies
     """
-
+    
     criterion = nn.CrossEntropyLoss()
     history = {"train_loss": [], "train_acc": [], "test_loss": [], "test_acc": [],
                "robust_acc": []}
+
 
     for epoch in range(num_epochs):
         model.train()
@@ -48,28 +50,52 @@ def adversarial_training(model, train_loader, test_loader, optimizer, scheduler,
         correct = 0
         total = 0
 
+        batch_iterator = tqdm.tqdm(train_loader, desc=f"Adv epoch {epoch + 1}/{num_epochs}", leave=False)
+        
+
         for images, labels in train_loader:
             images, labels = images.to(device), labels.to(device)
 
             # TODO: Generate adversarial examples using PGD
-            # adv_images = pgd_attack(model, images, labels, epsilon, alpha, pgd_steps)
+            adv_images = pgd_attack(images, labels)
 
             # TODO: Forward pass on adversarial images
-            # outputs = model(adv_images)
-            # loss = criterion(outputs, labels)
+            outputs = model.forward(adv_images)
+            loss = criterion(outputs, labels)
 
             # TODO: Backward pass and optimizer step
-            # optimizer.zero_grad()
-            # loss.backward()
-            # optimizer.step()
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
             # TODO: Track loss and accuracy
-            pass
+            total_loss += loss.item() * labels.size(0)
+            predicted = outputs.argmax(dim=1)
+            correct += (predicted == labels).sum().item()
+            total += labels.size(0)
+            batch_iterator.set_postfix(
+                loss=f"{total_loss / total:.4f}",
+                acc=f"{100.0 * correct / total:.2f}%",
+            )
 
-        # TODO: Evaluate on clean test set
-        # TODO: Evaluate on adversarial test set (robust accuracy)
+        train_loss = total_loss / total
+        train_acc = 100.0 * correct / total
+        test_loss, test_acc = evaluate(model, test_loader, criterion, device)
+
+        
         # TODO: Record history
+        history["train_loss"].append(train_loss)
+        history["train_acc"].append(train_acc)
+        history["test_loss"].append(test_loss)
+        history["test_acc"].append(test_acc)
+
+
         # TODO: Print epoch summary
+        print(
+            f"Epoch {epoch + 1}/{num_epochs} | "
+            f"Train Loss: {train_loss:.4f} Acc: {train_acc:.2f}% | "
+            f"Test Loss: {test_loss:.4f} Acc: {test_acc:.2f}%"
+        )
 
         if scheduler:
             scheduler.step()

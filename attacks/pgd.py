@@ -46,7 +46,8 @@ def pgd_attack(images, labels, model=None, optimizer=None, criterion=None, epsil
     # Optional: random start within epsilon ball
     if random_start:
         # TODO: Initialize adv_images with random perturbation
-
+        adv_images = adv_images + torch.empty_like(adv_images).uniform_(-epsilon, epsilon)
+        adv_images = torch.clamp(adv_images, 0, 1)
         pass
 
     # criterion = torch.nn.CrossEntropyLoss()
@@ -64,20 +65,20 @@ def pgd_attack(images, labels, model=None, optimizer=None, criterion=None, epsil
         # TODO: Backward pass
         optimizer.zero_grad()
         loss.backward()
-        optimizer.step()
+        # optimizer.step()
 
         # TODO: Collect gradient
         gradient = adv_images.grad
 
         # TODO: Update: adv_images = adv_images + alpha * sign(gradient)
-        grad_sign = gradient/abs(gradient) if gradient != 0 else 0
-        adv_images += alpha * grad_sign
+        with torch.no_grad():
+            adv_images = adv_images + alpha * gradient.sign()
 
-        # TODO: Project back into epsilon ball: clip to [images-epsilon, images+epsilon]
-        adv_images = torch.clamp(adv_images, images - epsilon, images + epsilon)
+            # TODO: Project back into epsilon ball: clip to [images-epsilon, images+epsilon]
+            adv_images = torch.clamp(adv_images, images - epsilon, images + epsilon)
 
-        # TODO: Clip to valid pixel range [0, 1]
-        adv_images = torch.clamp(adv_images, 0, 1)
+            # TODO: Clip to valid pixel range [0, 1]
+            adv_images = torch.clamp(adv_images, 0, 1)
         pass
 
     return adv_images
