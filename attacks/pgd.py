@@ -12,11 +12,12 @@ PGD is considered the strongest first-order adversary.
 import torch
 from config import *
 from models.cnn import BaselineCNN
-from torch.optim import Adam
 from torch.nn import CrossEntropyLoss
 
 
-def pgd_attack(images, labels, model=None, optimizer=None, criterion=None, epsilon=PGD_EPSILON, alpha=PGD_ALPHA, steps=PGD_STEPS, random_start=PGD_RANDOM_START):
+def pgd_attack(images, labels, model=None, optimizer=None, criterion=None,
+               epsilon=PGD_EPSILON, alpha=PGD_ALPHA, steps=PGD_STEPS,
+               random_start=PGD_RANDOM_START, num_restarts=PGD_NUM_RESTARTS):
     """
     Generate adversarial examples using PGD.
 
@@ -28,6 +29,7 @@ def pgd_attack(images, labels, model=None, optimizer=None, criterion=None, epsil
         alpha: step size per iteration (float)
         steps: number of PGD iterations (int)
         random_start: whether to start from random point in epsilon ball (bool)
+        num_restarts: number of attack initializations
 
     Returns:
         adversarial images (tensor)
@@ -35,49 +37,50 @@ def pgd_attack(images, labels, model=None, optimizer=None, criterion=None, epsil
 
     if model is None:
         model = BaselineCNN(num_classes=NUM_CLASSES)
-    if optimizer is None:
-        optimizer = Adam(params=model.parameters(), lr=LEARNING_RATE)
     if criterion is None:
         criterion = CrossEntropyLoss()
+    if epsilon < 0:
+        raise ValueError("epsilon must be non-negative")
+    if alpha < 0:
+        raise ValueError("alpha must be non-negative")
+    if steps < 0:
+        raise ValueError("steps must be non-negative")
+    if num_restarts < 1:
+        raise ValueError("num_restarts must be at least 1")
 
-    # Make a copy of images so original is not modified
-    adv_images = images.clone().detach()
+    clean_images = images.detach()
+    was_training = model.training
+    model.eval()
+    best_images = None
+    best_loss = None
 
-    # Optional: random start within epsilon ball
-    if random_start:
-        # TODO: Initialize adv_images with random perturbation
+    try:
+        for _ in range(num_restarts):
+            if random_start:
+                perturbation = torch.empty_like(clean_images).uniform_(-epsilon, epsilon)
+                adv_images = torch.clamp(clean_images + perturbation, 0, 1)
+            else:
+                adv_images = clean_images.clone()
 
-        pass
+            for _ in range(steps):
+                adv_images = adv_images.detach().requires_grad_(True)
+                output = model(adv_images)
+                loss = criterion(output, labels)
+                gradient = torch.autograd.grad(loss, adv_images)[0]
 
-    # criterion = torch.nn.CrossEntropyLoss()
+                with torch.no_grad():
+                    adv_images = adv_images + alpha * gradient.sign()
+                    lower_bound = clean_images - epsilon
+                    upper_bound = clean_images + epsilon
+                    adv_images = torch.max(torch.min(adv_images, upper_bound), lower_bound)
+                    adv_images = torch.clamp(adv_images, 0, 1)
 
-    for _ in range(steps):
-        # TODO: Set requires_grad
-        adv_images = adv_images.requires_grad_(True)
+            with torch.no_grad():
+                candidate_loss = criterion(model(adv_images), labels).detach()
+            if best_loss is None or candidate_loss > best_loss:
+                best_loss = candidate_loss
+                best_images = adv_images.detach().clone()
 
-        # TODO: Forward pass
-        output = model.forward(adv_images)
-
-        # TODO: Compute loss
-        loss = criterion(output, labels)
-
-        # TODO: Backward pass
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-
-        # TODO: Collect gradient
-        gradient = adv_images.grad
-
-        # TODO: Update: adv_images = adv_images + alpha * sign(gradient)
-        grad_sign = gradient/abs(gradient) if gradient != 0 else 0
-        adv_images += alpha * grad_sign
-
-        # TODO: Project back into epsilon ball: clip to [images-epsilon, images+epsilon]
-        adv_images = torch.clamp(adv_images, images - epsilon, images + epsilon)
-
-        # TODO: Clip to valid pixel range [0, 1]
-        adv_images = torch.clamp(adv_images, 0, 1)
-        pass
-
-    return adv_images
+        return best_images
+    finally:
+        model.train(was_training)
