@@ -60,6 +60,6 @@ def fgsm_attack(images, labels, model=None, optimizer=None, epsilon=FGSM_EPSILON
     adv_images = images + epsilon * grad_sign
 
     # TODO: Clip adversarial images to valid range [0, 1]
-    
+    adv_images = torch.clamp(adv_images, 0, 1)
 
     pass

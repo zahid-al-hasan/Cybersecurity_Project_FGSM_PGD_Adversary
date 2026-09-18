@@ -10,9 +10,13 @@ PGD is considered the strongest first-order adversary.
 """
 
 import torch
+from config import *
+from models.cnn import BaselineCNN
+from torch.optim import Adam
+from torch.nn import CrossEntropyLoss
 
 
-def pgd_attack(model, images, labels, epsilon, alpha, steps, random_start=True):
+def pgd_attack(images, labels, model=None, optimizer=None, criterion=None, epsilon=PGD_EPSILON, alpha=PGD_ALPHA, steps=PGD_STEPS, random_start=PGD_RANDOM_START):
     """
     Generate adversarial examples using PGD.
 
@@ -29,25 +33,51 @@ def pgd_attack(model, images, labels, epsilon, alpha, steps, random_start=True):
         adversarial images (tensor)
     """
 
+    if model is None:
+        model = BaselineCNN(num_classes=NUM_CLASSES)
+    if optimizer is None:
+        optimizer = Adam(params=model.parameters(), lr=LEARNING_RATE)
+    if criterion is None:
+        criterion = CrossEntropyLoss()
+
     # Make a copy of images so original is not modified
     adv_images = images.clone().detach()
 
     # Optional: random start within epsilon ball
     if random_start:
         # TODO: Initialize adv_images with random perturbation
+
         pass
 
-    criterion = torch.nn.CrossEntropyLoss()
+    # criterion = torch.nn.CrossEntropyLoss()
 
     for _ in range(steps):
         # TODO: Set requires_grad
+        adv_images = adv_images.requires_grad_(True)
+
         # TODO: Forward pass
+        output = model.forward(adv_images)
+
         # TODO: Compute loss
+        loss = criterion(output, labels)
+
         # TODO: Backward pass
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
         # TODO: Collect gradient
+        gradient = adv_images.grad
+
         # TODO: Update: adv_images = adv_images + alpha * sign(gradient)
+        grad_sign = gradient/abs(gradient) if gradient != 0 else 0
+        adv_images += alpha * grad_sign
+
         # TODO: Project back into epsilon ball: clip to [images-epsilon, images+epsilon]
+        adv_images = torch.clamp(adv_images, images - epsilon, images + epsilon)
+
         # TODO: Clip to valid pixel range [0, 1]
+        adv_images = torch.clamp(adv_images, 0, 1)
         pass
 
     return adv_images
