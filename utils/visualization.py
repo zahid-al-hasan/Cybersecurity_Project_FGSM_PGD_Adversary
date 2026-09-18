@@ -8,7 +8,7 @@ import torch, os
 from config import *
 
 
-def plot_accuracy_vs_epsilon(epsilons, fgsm_std, fgsm_adv, pgd_std, pgd_adv):
+def plot_accuracy_vs_epsilon(base_acc, epsilons, fgsm_std, fgsm_adv, pgd_std, pgd_adv):
     """
     Plot model accuracy vs epsilon for both FGSM and PGD attacks.
 
@@ -21,7 +21,7 @@ def plot_accuracy_vs_epsilon(epsilons, fgsm_std, fgsm_adv, pgd_std, pgd_adv):
     # PLOTS_DIR = os.path.join(BASE_DIR, "plots")
 
     os.makedirs(RESULTS_DIR, exist_ok=True)
-
+    
     # Figure 1: FGSM Attack Performance
     plt.figure(figsize=(8, 5))
     plt.plot(epsilons, fgsm_std, 'o-', color='#e74c3c', label='Standard CNN (Under FGSM)', linewidth=2)
@@ -30,6 +30,13 @@ def plot_accuracy_vs_epsilon(epsilons, fgsm_std, fgsm_adv, pgd_std, pgd_adv):
     plt.xlabel('Epsilon Perturbation Magnitude ($\epsilon$)', fontsize=10)
     plt.ylabel('Model Accuracy (%)', fontsize=10)
     plt.ylim(-5, 100)
+    plt.axhline(
+            y=base_acc, 
+            color='black', 
+            linestyle='--', 
+            linewidth=2.5, 
+            label=f'Clean Baseline ({base_acc}%)'
+        )
     plt.grid(True, linestyle='--', alpha=0.6)
     plt.legend(frameon=True)
     plt.tight_layout()

@@ -26,6 +26,7 @@ from utils.visualization import plot_accuracy_vs_epsilon
 
 train_loader, test_loader = get_dataloaders(PARQUET_DATA_ROOT, BATCH_SIZE)
 epsilons = [0.005, 0.008, 0.01, 0.02, 0.05, 0.075]
+epsilons = [0.03]
 
 
 def phase1_train_baseline():
@@ -37,7 +38,11 @@ def phase1_train_baseline():
     model = BaselineCNN(num_classes=NUM_CLASSES).to(DEVICE)
     model, history = train(train_loader, test_loader, model=model, device=DEVICE)
     torch.save(model.state_dict(), os.path.join(CHECKPOINT_DIR, "baseline.pth"))
-    return model
+
+    criterion = torch.nn.CrossEntropyLoss()
+
+    _, acc = evaluate(model, test_loader, criterion=criterion, device=DEVICE)
+    return model, acc
 
 
 def phase2_attack_baseline():
@@ -105,30 +110,30 @@ def phase3_defense():
 
     model = BaselineCNN(num_classes=NUM_CLASSES)
     model.load_state_dict(torch.load(
-        os.path.join(CHECKPOINT_DIR, "adv_trained.pth"), map_location=DEVICE
+        os.path.join(CHECKPOINT_DIR, "baseline.pth"), map_location=DEVICE, weights_only=True
     ))
     model.eval()
 
-    # optimizer = Adam(model.parameters(), lr=ADV_TRAIN_LEARNING_RATE)
-    # model, history = adversarial_training(
-    #     model,
-    #     train_loader,
-    #     test_loader,
-    #     scheduler=None,
-    #     device=DEVICE,
-    #     optimizer=optimizer,
-    #     epsilon=ADV_TRAIN_EPSILON,
-    #     alpha=PGD_ALPHA,
-    #     pgd_steps=PGD_STEPS,
-    #     num_epochs=ADV_TRAIN_EPOCHS,
-    # )
-    # torch.save(model.state_dict(), os.path.join(CHECKPOINT_DIR, "adv_trained.pth"))
+    optimizer = Adam(model.parameters(), lr=ADV_TRAIN_LEARNING_RATE)
+    model, history = adversarial_training(
+        model,
+        train_loader,
+        test_loader,
+        scheduler=None,
+        device=DEVICE,
+        optimizer=optimizer,
+        epsilon=ADV_TRAIN_EPSILON,
+        alpha=PGD_ALPHA,
+        pgd_steps=PGD_STEPS,
+        num_epochs=ADV_TRAIN_EPOCHS,
+    )
+    torch.save(model.state_dict(), os.path.join(CHECKPOINT_DIR, "adv_trained.pth"))
     print("Phase 3: saved checkpoints/adv_trained.pth")
 
     criterion = torch.nn.CrossEntropyLoss()
 
     new_results = {
-        "clean_accuracy": evaluate(model, test_loader, criterion, DEVICE),
+        "clean_accuracy": evaluate(model, test_loader, criterion, DEVICE)[1],
         "epsilons": epsilons,
         "fgsm_accuracy": [evaluate_robustness(
             model, test_loader, DEVICE, "fgsm", epsilon=eps
@@ -147,35 +152,49 @@ def phase3_defense():
 
 def main():
     set_seed()
-    # print("=" * 60)
-    # print("FGSM/PGD Adversarial Examples on CIFAR-10 Image Classifier")
-    # print("=" * 60)
+    print("=" * 60)
+    print("FGSM/PGD Adversarial Examples on CIFAR-10 Image Classifier")
+    print("=" * 60)
 
     # print("\n--- Phase 1: Training Baseline Model ---")
-    # phase1_train_baseline()
+    # _, acc = phase1_train_baseline()
 
     # print("\n--- Phase 2: Attacking Baseline Model ---")
     # phase2_attack_baseline()
 
-    # print("\n--- Phase 3: Defense (Adversarial Training) ---")
-    phase3_defense()
+    print("\n--- Phase 3: Defense (Adversarial Training) ---")
+    # phase3_defense()
+
 
     print(f"\n{'*'*10} Plotting data... {'*'*10}")
-    fgsm_data = torch.load("FGSM_PGD_Adversary/results/fgsm_results.pth")
-    pgd_data = torch.load("FGSM_PGD_Adversary/results/pgd_results.pth")
-    with open("FGSM_PGD_Adversary/results/adv_trained_evaluation.json", "r", encoding="utf-8") as f:
+
+    base_model = BaselineCNN(num_classes=NUM_CLASSES)
+    base_model.load_state_dict(torch.load(
+        os.path.join(CHECKPOINT_DIR, "baseline.pth"), map_location=DEVICE, weights_only=True
+    ))
+    base_model.eval()
+
+    _, base_acc = evaluate(base_model, test_loader, criterion=torch.nn.CrossEntropyLoss(), device=DEVICE)
+    print(f"Baseline accuracy : {base_acc}")
+
+
+    fgsm_data = torch.load(os.path.join(RESULTS_DIR, "fgsm_results.pth"))
+    pgd_data = torch.load(os.path.join(RESULTS_DIR, "pgd_results.pth"))
+
+    with open(os.path.join(RESULTS_DIR, "adv_trained_evaluation.json"), "r", encoding="utf-8") as f:
         adv_data = json.load(f)
 
-    epsilons = adv_data["adversarially_trained"]["epsilons"]
+    
     fgsm_std_acc = fgsm_data["fgsm_accuracies"]
     pgd_std_acc = pgd_data["pgd_accuracies"]
     fgsm_adv = adv_data["adversarially_trained"]["fgsm_accuracy"]
     pgd_adv = adv_data["adversarially_trained"]["pgd_accuracy"]
 
-    print(fgsm_data)
+    print(f"Clean accuracy after adversary training : {adv_data["adversarially_trained"]["clean_accuracy"]}")
+    print(pgd_data)
 
-    plot_accuracy_vs_epsilon(epsilons, fgsm_std_acc, fgsm_adv, pgd_std_acc, pgd_adv)
-    print("\nDone! Check /plots for plots and results/ for analysis.")
+    # plot_accuracy_vs_epsilon(base_acc, epsilons, fgsm_std_acc, fgsm_adv, pgd_std_acc, pgd_adv)
+    print("\nDone! Check results/ for plots and analysis.")
 
 
 if __name__ == "__main__":

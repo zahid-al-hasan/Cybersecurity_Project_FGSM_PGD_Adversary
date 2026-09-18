@@ -53,11 +53,11 @@ def adversarial_training(model, train_loader, test_loader, optimizer, scheduler,
         batch_iterator = tqdm.tqdm(train_loader, desc=f"Adv epoch {epoch + 1}/{num_epochs}", leave=False)
         
 
-        for images, labels in train_loader:
+        for images, labels in batch_iterator:
             images, labels = images.to(device), labels.to(device)
 
             # TODO: Generate adversarial examples using PGD
-            adv_images = pgd_attack(images, labels)
+            adv_images = pgd_attack(images, labels, model=model, epsilon=epsilon, alpha=alpha, steps=pgd_steps).detach()
 
             # TODO: Forward pass on adversarial images
             outputs = model.forward(adv_images)

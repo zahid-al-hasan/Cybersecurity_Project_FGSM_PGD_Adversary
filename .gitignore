@@ -6,15 +6,13 @@ __pycache__/
 # Data
 data/
 
-# Plots
-plots/
-
 # Checkpoints
 checkpoints/*.pth
 
 # Results
 results/*.png
 results/*.csv
+results/*.json
 
 # IDE
 .vscode/
