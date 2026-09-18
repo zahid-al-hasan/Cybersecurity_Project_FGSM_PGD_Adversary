@@ -88,10 +88,13 @@ def plot_training_history(history, save_path=None):
     axes[1].set_title("Accuracy")
     axes[1].set_xlabel("Epoch")
     axes[1].set_ylabel("Percent")
+    axes[1].set_ylim(0, 100)
+    axes[1].set_xticks(list(epochs))
     axes[1].legend()
     axes[1].grid(True, alpha=0.3)
 
     figure.tight_layout()
     if save_path:
         figure.savefig(save_path, bbox_inches="tight")
+        plt.close(figure)
     return figure

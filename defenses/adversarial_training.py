@@ -9,6 +9,7 @@ generated during each epoch, forcing the model to learn robust features.
 
 import torch
 import torch.nn as nn
+from tqdm import tqdm
 from attacks.pgd import pgd_attack
 from utils.metrics import evaluate_robustness
 
@@ -50,7 +51,12 @@ def adversarial_training(model, train_loader, test_loader, optimizer, scheduler,
         correct = 0
         total = 0
 
-        for images, labels in train_loader:
+        batch_iterator = tqdm(
+            train_loader,
+            desc=f"Adv epoch {epoch + 1}/{num_epochs}",
+            leave=False,
+        )
+        for images, labels in batch_iterator:
             images, labels = images.to(device), labels.to(device)
 
             adv_images = pgd_attack(
@@ -73,6 +79,10 @@ def adversarial_training(model, train_loader, test_loader, optimizer, scheduler,
             predicted = outputs.argmax(dim=1)
             correct += (predicted == labels).sum().item()
             total += labels.size(0)
+            batch_iterator.set_postfix(
+                loss=f"{total_loss / total:.4f}",
+                acc=f"{100.0 * correct / total:.2f}%",
+            )
 
         train_loss = total_loss / total
         train_acc = 100.0 * correct / total
@@ -87,6 +97,10 @@ def adversarial_training(model, train_loader, test_loader, optimizer, scheduler,
             epsilon=epsilon,
             alpha=alpha,
             steps=pgd_steps,
+        )
+        print(
+            f"  Epoch {epoch + 1}/{num_epochs} evaluation: "
+            f"clean={test_acc:.2f}%, robust={robust_acc:.2f}%"
         )
 
         history["train_loss"].append(train_loss)

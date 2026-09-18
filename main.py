@@ -55,16 +55,41 @@ def phase2_attack_baseline():
     model.load_state_dict(torch.load(
         os.path.join(CHECKPOINT_DIR, "baseline.pth"), map_location=DEVICE
     ))
+    print(f"Phase 2: evaluating clean accuracy on {DEVICE}...")
+    clean_accuracy = evaluate_model(model, test_loader, DEVICE)
+    print(f"Phase 2: clean accuracy = {clean_accuracy:.2%}")
+
+    print("Phase 2: running FGSM epsilon sweep...")
+    fgsm_accuracies = []
+    for epsilon in EPSILONS:
+        print(f"  FGSM epsilon={epsilon:.3f} ...", end="", flush=True)
+        accuracy = evaluate_robustness(
+            model, test_loader, DEVICE, "fgsm", epsilon
+        )
+        fgsm_accuracies.append(accuracy)
+        print(f" accuracy={accuracy:.2%}")
+
+    print("Phase 2: running PGD epsilon sweep...")
+    pgd_accuracies = []
+    for epsilon in EPSILONS:
+        print(
+            f"  PGD epsilon={epsilon:.3f}, steps={PGD_STEPS}, "
+            f"restarts={PGD_NUM_RESTARTS} ...",
+            end="",
+            flush=True,
+        )
+        accuracy = evaluate_robustness(
+            model, test_loader, DEVICE, "pgd", epsilon,
+            alpha=PGD_ALPHA, steps=PGD_STEPS,
+        )
+        pgd_accuracies.append(accuracy)
+        print(f" accuracy={accuracy:.2%}")
+
     results = {
         "epsilons": EPSILONS,
-        "clean_accuracy": evaluate_model(model, test_loader, DEVICE),
-        "fgsm_accuracies": evaluate_over_epsilons(
-            model, test_loader, DEVICE, "fgsm", EPSILONS
-        ),
-        "pgd_accuracies": evaluate_over_epsilons(
-            model, test_loader, DEVICE, "pgd", EPSILONS,
-            alpha=PGD_ALPHA, steps=PGD_STEPS
-        ),
+        "clean_accuracy": clean_accuracy,
+        "fgsm_accuracies": fgsm_accuracies,
+        "pgd_accuracies": pgd_accuracies,
     }
     plot_accuracy_vs_epsilon(
         EPSILONS,
@@ -74,6 +99,7 @@ def phase2_attack_baseline():
     )
     with open(os.path.join(RESULTS_DIR, "baseline_evaluation.json"), "w", encoding="utf-8") as output_file:
         json.dump(results, output_file, indent=2)
+    print("Phase 2 complete: saved baseline evaluation and accuracy plot.")
     return results
 
 
@@ -88,6 +114,7 @@ def phase3_defense():
     model.load_state_dict(torch.load(
         os.path.join(CHECKPOINT_DIR, "baseline.pth"), map_location=DEVICE
     ))
+    print("Phase 3: evaluating baseline before adversarial training...")
     baseline_results = {
         "clean_accuracy": evaluate_model(model, test_loader, DEVICE),
         "fgsm_accuracy": evaluate_robustness(
@@ -99,6 +126,10 @@ def phase3_defense():
         ),
     }
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
+    print(
+        f"Phase 3: adversarial training for {ADV_TRAIN_EPOCHS} epochs "
+        f"(PGD steps={PGD_STEPS}, epsilon={ADV_TRAIN_EPSILON})..."
+    )
     model, history = adversarial_training(
         model,
         train_loader,
@@ -112,7 +143,9 @@ def phase3_defense():
         num_epochs=ADV_TRAIN_EPOCHS,
     )
     torch.save(model.state_dict(), os.path.join(CHECKPOINT_DIR, "adv_trained.pth"))
+    print("Phase 3: saved checkpoints/adv_trained.pth")
     plot_training_history(history, os.path.join(RESULTS_DIR, "adv_training.png"))
+    print("Phase 3: saved results/adv_training.png")
     results = {
         "clean_accuracy": evaluate_model(model, test_loader, DEVICE),
         "fgsm_accuracy": evaluate_robustness(
@@ -125,6 +158,7 @@ def phase3_defense():
     }
     with open(os.path.join(RESULTS_DIR, "adv_trained_evaluation.json"), "w", encoding="utf-8") as output_file:
         json.dump({"baseline": baseline_results, "adversarially_trained": results}, output_file, indent=2)
+    print("Phase 3 complete: saved adversarial-training evaluation results.")
     return model, history, results
 
 
