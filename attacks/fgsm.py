@@ -42,7 +42,7 @@ def fgsm_attack(images, labels, model=None, optimizer=None, epsilon=FGSM_EPSILON
     images = images.detach().requires_grad_(True)
 
     # TODO: Forward pass - get model predictions
-    output = model(images)
+    output = model.forward(images)
 
     # TODO: Compute loss
     loss = criterion(output, labels)
@@ -53,8 +53,13 @@ def fgsm_attack(images, labels, model=None, optimizer=None, epsilon=FGSM_EPSILON
     optimizer.step()
 
     # TODO: Collect gradient of loss w.r.t. input images
+    gradient = images.grad
 
     # TODO: Create adversarial example: x_adv = x + epsilon * sign(gradient)
+    grad_sign = gradient/abs(gradient) if gradient != 0 else 0
+    adv_images = images + epsilon * grad_sign
+
     # TODO: Clip adversarial images to valid range [0, 1]
+    
 
     pass

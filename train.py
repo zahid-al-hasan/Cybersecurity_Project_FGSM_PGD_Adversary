@@ -60,7 +60,7 @@ def train(train_loader, test_loader, model=None, optimizer=None,
         for images, labels in pbar:
             images, labels = images.to(device), labels.to(device)
 
-            output = model(images)
+            output = model.forward(images)
             loss = criterion(output, labels)
 
             optimizer.zero_grad()
