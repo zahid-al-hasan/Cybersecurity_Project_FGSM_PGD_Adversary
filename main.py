@@ -107,6 +107,7 @@ def phase3_defense():
     model.load_state_dict(torch.load(
         os.path.join(CHECKPOINT_DIR, "adv_trained.pth"), map_location=DEVICE
     ))
+    model.eval()
 
     # optimizer = Adam(model.parameters(), lr=ADV_TRAIN_LEARNING_RATE)
     # model, history = adversarial_training(
@@ -145,6 +146,7 @@ def phase3_defense():
 
 
 def main():
+    set_seed()
     # print("=" * 60)
     # print("FGSM/PGD Adversarial Examples on CIFAR-10 Image Classifier")
     # print("=" * 60)
@@ -156,7 +158,7 @@ def main():
     # phase2_attack_baseline()
 
     # print("\n--- Phase 3: Defense (Adversarial Training) ---")
-    # phase3_defense()
+    phase3_defense()
 
     print(f"\n{'*'*10} Plotting data... {'*'*10}")
     fgsm_data = torch.load("FGSM_PGD_Adversary/results/fgsm_results.pth")
@@ -170,7 +172,7 @@ def main():
     fgsm_adv = adv_data["adversarially_trained"]["fgsm_accuracy"]
     pgd_adv = adv_data["adversarially_trained"]["pgd_accuracy"]
 
-    # print(fgsm_data)
+    print(fgsm_data)
 
     plot_accuracy_vs_epsilon(epsilons, fgsm_std_acc, fgsm_adv, pgd_std_acc, pgd_adv)
     print("\nDone! Check /plots for plots and results/ for analysis.")
