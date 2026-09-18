@@ -10,6 +10,7 @@ generated during each epoch, forcing the model to learn robust features.
 import torch
 import torch.nn as nn
 from attacks.pgd import pgd_attack
+from utils.metrics import evaluate_robustness
 
 
 def adversarial_training(model, train_loader, test_loader, optimizer, scheduler,
@@ -41,6 +42,7 @@ def adversarial_training(model, train_loader, test_loader, optimizer, scheduler,
     criterion = nn.CrossEntropyLoss()
     history = {"train_loss": [], "train_acc": [], "test_loss": [], "test_acc": [],
                "robust_acc": []}
+    model = model.to(device)
 
     for epoch in range(num_epochs):
         model.train()
@@ -51,27 +53,79 @@ def adversarial_training(model, train_loader, test_loader, optimizer, scheduler,
         for images, labels in train_loader:
             images, labels = images.to(device), labels.to(device)
 
-            # TODO: Generate adversarial examples using PGD
-            # adv_images = pgd_attack(model, images, labels, epsilon, alpha, pgd_steps)
+            adv_images = pgd_attack(
+                images,
+                labels,
+                model=model,
+                criterion=criterion,
+                epsilon=epsilon,
+                alpha=alpha,
+                steps=pgd_steps,
+            )
+            outputs = model(adv_images)
+            loss = criterion(outputs, labels)
 
-            # TODO: Forward pass on adversarial images
-            # outputs = model(adv_images)
-            # loss = criterion(outputs, labels)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
-            # TODO: Backward pass and optimizer step
-            # optimizer.zero_grad()
-            # loss.backward()
-            # optimizer.step()
+            total_loss += loss.item() * labels.size(0)
+            predicted = outputs.argmax(dim=1)
+            correct += (predicted == labels).sum().item()
+            total += labels.size(0)
 
-            # TODO: Track loss and accuracy
-            pass
+        train_loss = total_loss / total
+        train_acc = 100.0 * correct / total
+        test_loss, test_acc = _evaluate_loss_and_accuracy(
+            model, test_loader, criterion, device
+        )
+        robust_acc = 100.0 * evaluate_robustness(
+            model,
+            test_loader,
+            device,
+            attack_type="pgd",
+            epsilon=epsilon,
+            alpha=alpha,
+            steps=pgd_steps,
+        )
 
-        # TODO: Evaluate on clean test set
-        # TODO: Evaluate on adversarial test set (robust accuracy)
-        # TODO: Record history
-        # TODO: Print epoch summary
+        history["train_loss"].append(train_loss)
+        history["train_acc"].append(train_acc)
+        history["test_loss"].append(test_loss)
+        history["test_acc"].append(test_acc)
+        history["robust_acc"].append(robust_acc)
+
+        print(
+            f"Epoch {epoch + 1}/{num_epochs} | "
+            f"Train Loss: {train_loss:.4f} Acc: {train_acc:.2f}% | "
+            f"Test Loss: {test_loss:.4f} Acc: {test_acc:.2f}% | "
+            f"Robust Acc: {robust_acc:.2f}%"
+        )
 
         if scheduler:
             scheduler.step()
 
     return model, history
+
+
+def _evaluate_loss_and_accuracy(model, data_loader, criterion, device):
+    was_training = model.training
+    model.eval()
+    total_loss = 0.0
+    correct = 0
+    total = 0
+
+    try:
+        with torch.no_grad():
+            for images, labels in data_loader:
+                images, labels = images.to(device), labels.to(device)
+                outputs = model(images)
+                total_loss += criterion(outputs, labels).item() * labels.size(0)
+                correct += (outputs.argmax(dim=1) == labels).sum().item()
+                total += labels.size(0)
+    finally:
+        model.train(was_training)
+
+    if total == 0:
+        return 0.0, 0.0
+    return total_loss / total, 100.0 * correct / total
