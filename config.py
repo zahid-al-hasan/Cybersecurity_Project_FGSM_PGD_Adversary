@@ -4,6 +4,8 @@ Contains all hyperparameters and paths.
 """
 
 import os
+import random
+import numpy as np
 import torch
 
 # Paths
@@ -23,6 +25,15 @@ NUM_CHANNELS = 3
 BATCH_SIZE = 128
 LEARNING_RATE = 0.001
 NUM_EPOCHS = 20
+SEED = 406
+
+
+def set_seed(seed=SEED):
+	random.seed(seed)
+	np.random.seed(seed)
+	torch.manual_seed(seed)
+	if torch.cuda.is_available():
+		torch.cuda.manual_seed_all(seed)
 
 # FGSM Attack
 FGSM_EPSILON = 0.03  # epsilon for FGSM (CIFAR-10 pixel range is [0,1])

@@ -94,6 +94,7 @@ def train(train_loader, test_loader, model=None, optimizer=None,
 
 
 def main():
+    set_seed()
     train_loader, test_loader = get_dataloaders(PARQUET_DATA_ROOT, BATCH_SIZE)
     model = BaselineCNN(num_classes=NUM_CLASSES).to(DEVICE)
     model, history = train(train_loader, test_loader, model=model)

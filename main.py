@@ -129,6 +129,7 @@ def phase3_defense():
 
 
 def main():
+    set_seed()
     print("=" * 60)
     print("FGSM/PGD Adversarial Examples on CIFAR-10 Image Classifier")
     print("=" * 60)
