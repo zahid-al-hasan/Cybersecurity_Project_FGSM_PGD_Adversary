@@ -4,6 +4,7 @@ Evaluation metrics for measuring attack success and model robustness.
 
 import torch
 import torch.nn as nn
+from config import PGD_ALPHA, PGD_STEPS
 from attacks.fgsm import fgsm_attack
 from attacks.pgd import pgd_attack
 
@@ -21,10 +22,23 @@ def evaluate_model(model, test_loader, device):
         accuracy (float)
     """
 
-    # TODO: Set model to eval mode
-    # TODO: Loop through test data, compute predictions
-    # TODO: Calculate and return accuracy
-    pass
+    was_training = model.training
+    model.eval()
+    correct = 0
+    total = 0
+
+    try:
+        with torch.no_grad():
+            for images, labels in test_loader:
+                images = images.to(device)
+                labels = labels.to(device)
+                predictions = model(images).argmax(dim=1)
+                correct += (predictions == labels).sum().item()
+                total += labels.size(0)
+    finally:
+        model.train(was_training)
+
+    return correct / total if total else 0.0
 
 
 def evaluate_robustness(model, test_loader, device, attack_type, epsilon,
@@ -45,11 +59,41 @@ def evaluate_robustness(model, test_loader, device, attack_type, epsilon,
         accuracy (float)
     """
 
-    # TODO: Set model to eval mode
-    # TODO: For each batch, generate adversarial examples
-    # TODO: Evaluate model on adversarial examples
-    # TODO: Calculate and return robust accuracy
-    pass
+    if attack_type not in {"fgsm", "pgd"}:
+        raise ValueError("attack_type must be 'fgsm' or 'pgd'")
+
+    was_training = model.training
+    model.eval()
+    correct = 0
+    total = 0
+
+    try:
+        for images, labels in test_loader:
+            images = images.to(device)
+            labels = labels.to(device)
+
+            if attack_type == "fgsm":
+                adversarial_images = fgsm_attack(
+                    images, labels, model=model, epsilon=epsilon
+                )
+            else:
+                adversarial_images = pgd_attack(
+                    images,
+                    labels,
+                    model=model,
+                    epsilon=epsilon,
+                    alpha=PGD_ALPHA if alpha is None else alpha,
+                    steps=PGD_STEPS if steps is None else steps,
+                )
+
+            with torch.no_grad():
+                predictions = model(adversarial_images).argmax(dim=1)
+            correct += (predictions == labels).sum().item()
+            total += labels.size(0)
+    finally:
+        model.train(was_training)
+
+    return correct / total if total else 0.0
 
 
 def evaluate_over_epsilons(model, test_loader, device, attack_type, epsilons,
@@ -70,5 +114,15 @@ def evaluate_over_epsilons(model, test_loader, device, attack_type, epsilons,
         list of accuracies, one per epsilon
     """
 
-    # TODO: Loop over epsilons, call evaluate_robustness for each
-    pass
+    return [
+        evaluate_robustness(
+            model,
+            test_loader,
+            device,
+            attack_type,
+            epsilon,
+            alpha=alpha,
+            steps=steps,
+        )
+        for epsilon in epsilons
+    ]
