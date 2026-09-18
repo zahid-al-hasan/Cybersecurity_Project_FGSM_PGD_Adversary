@@ -24,7 +24,7 @@ NUM_CHANNELS = 3
 # Training
 BATCH_SIZE = 128
 LEARNING_RATE = 0.001
-NUM_EPOCHS = 5
+NUM_EPOCHS = 20
 SEED = 406
 
 
@@ -41,13 +41,14 @@ FGSM_EPSILON = 0.03  # epsilon for FGSM (CIFAR-10 pixel range is [0,1])
 # PGD Attack
 PGD_EPSILON = 0.03
 PGD_ALPHA = 0.007    # step size
-PGD_STEPS = 2       # number of iterations
+PGD_STEPS = 10       # number of iterations
 PGD_RANDOM_START = True
-PGD_NUM_RESTARTS = 1
+PGD_NUM_RESTARTS = 5
 
 # Adversarial Training
 ADV_TRAIN_EPSILON = 0.03
-ADV_TRAIN_EPOCHS = 3
+ADV_TRAIN_EPOCHS = 15
+ADV_TRAIN_LEARNING_RATE = 0.0003
 
 # Device
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"

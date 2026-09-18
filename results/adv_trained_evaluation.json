@@ -1,12 +1,12 @@
 {
   "baseline": {
-    "clean_accuracy": 0.6878,
-    "fgsm_accuracy": 0.0739,
-    "pgd_accuracy": 0.2358
+    "clean_accuracy": 0.7452,
+    "fgsm_accuracy": 0.0474,
+    "pgd_accuracy": 0.003
   },
   "adversarially_trained": {
-    "clean_accuracy": 0.6589,
-    "fgsm_accuracy": 0.287,
-    "pgd_accuracy": 0.4666
+    "clean_accuracy": 0.4441,
+    "fgsm_accuracy": 0.2914,
+    "pgd_accuracy": 0.2686
   }
 }

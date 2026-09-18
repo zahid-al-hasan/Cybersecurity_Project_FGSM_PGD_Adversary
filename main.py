@@ -125,7 +125,7 @@ def phase3_defense():
             alpha=PGD_ALPHA, steps=PGD_STEPS
         ),
     }
-    optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
+    optimizer = optim.Adam(model.parameters(), lr=ADV_TRAIN_LEARNING_RATE)
     print(
         f"Phase 3: adversarial training for {ADV_TRAIN_EPOCHS} epochs "
         f"(PGD steps={PGD_STEPS}, epsilon={ADV_TRAIN_EPSILON})..."
