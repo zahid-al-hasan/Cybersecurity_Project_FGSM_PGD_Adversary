@@ -11,7 +11,7 @@ import torch.optim as optim
 from tqdm import tqdm
 
 from models.cnn import BaselineCNN
-from data.cifar10_parquet import get_dataloaders
+from dataset_loader import get_dataloaders
 from config import *
 
 
