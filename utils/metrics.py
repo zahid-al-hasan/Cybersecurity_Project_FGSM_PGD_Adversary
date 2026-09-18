@@ -18,7 +18,7 @@ def evaluate(model, test_loader, criterion, device):
     with torch.no_grad():
         for images, labels in test_loader:
             images, labels = images.to(device), labels.to(device)
-            output = model(images)
+            output = model.forward(images)
             loss = criterion(output, labels)
 
             total_loss += loss.item() * labels.size(0)
@@ -66,10 +66,10 @@ def evaluate_robustness(model, test_loader, device, attack_type, epsilon, alpha=
             adversarial_images = pgd_attack(images, labels, model=model, epsilon=epsilon)
     
         with torch.no_grad():
-            predictions = model(adversarial_images).argmax(dim=1)
+            predictions = model.forward(adversarial_images).argmax(dim=1)
         correct += (predictions == labels).sum().item()
         total += labels.size(0)
-    return correct / total if total else 0.0
+    return 100 * (correct / total) if total else 0.0
 
 
 def evaluate_over_epsilons(model, test_loader, device, attack_type, epsilons,

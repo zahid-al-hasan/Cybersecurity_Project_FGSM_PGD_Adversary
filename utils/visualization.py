@@ -4,29 +4,11 @@ Visualization utilities for plotting results.
 
 import matplotlib.pyplot as plt
 import numpy as np
-import torch
+import torch, os
+from config import *
 
 
-def plot_examples(original, adversarial, labels, predictions, num_examples=5):
-    """
-    Plot original vs adversarial images side by side.
-
-    Args:
-        original: batch of clean images
-        adversarial: batch of adversarial images
-        labels: true labels
-        predictions: model predictions on adversarial images
-        num_examples: how many images to show
-    """
-
-    # TODO: Create a grid of plots
-    # - Top row: original images with true labels
-    # - Bottom row: adversarial images with predicted labels
-    # - Show the perturbation (difference) as well
-    pass
-
-
-def plot_accuracy_vs_epsilon(epsilons, fgsm_accuracies, pgd_accuracies):
+def plot_accuracy_vs_epsilon(epsilons, fgsm_std, fgsm_adv, pgd_std, pgd_adv):
     """
     Plot model accuracy vs epsilon for both FGSM and PGD attacks.
 
@@ -35,20 +17,51 @@ def plot_accuracy_vs_epsilon(epsilons, fgsm_accuracies, pgd_accuracies):
         fgsm_accuracies: accuracy under FGSM for each epsilon
         pgd_accuracies: accuracy under PGD for each epsilon
     """
+    
+    # PLOTS_DIR = os.path.join(BASE_DIR, "plots")
 
-    # TODO: Plot line chart with epsilon on x-axis, accuracy on y-axis
-    # Two lines: one for FGSM, one for PGD
+    os.makedirs(RESULTS_DIR, exist_ok=True)
+
+    # Figure 1: FGSM Attack Performance
+    plt.figure(figsize=(8, 5))
+    plt.plot(epsilons, fgsm_std, 'o-', color='#e74c3c', label='Standard CNN (Under FGSM)', linewidth=2)
+    plt.plot(epsilons, fgsm_adv, 's--', color='#2ecc71', label='Adversarially Trained CNN (Under FGSM)', linewidth=2)
+    plt.title('FGSM Attack: Standard vs. Adversarially Trained Model Accuracy', fontsize=12)
+    plt.xlabel('Epsilon Perturbation Magnitude ($\epsilon$)', fontsize=10)
+    plt.ylabel('Model Accuracy (%)', fontsize=10)
+    plt.ylim(-5, 100)
+    plt.grid(True, linestyle='--', alpha=0.6)
+    plt.legend(frameon=True)
+    plt.tight_layout()
+    plt.savefig(os.path.join(RESULTS_DIR, 'fgsm_comparison.png'))
+    plt.close()
+
+    # Figure 2: PGD Attack Performance
+    plt.figure(figsize=(8, 5))
+    plt.plot(epsilons, pgd_std, 'o-', color='#e74c3c', label='Standard CNN (Under PGD)', linewidth=2)
+    plt.plot(epsilons, pgd_adv, 's--', color='#3498db', label='Adversarially Trained CNN (Under PGD)', linewidth=2)
+    plt.title('PGD Attack: Standard vs. Adversarially Trained Model Accuracy', fontsize=12)
+    plt.xlabel('Epsilon Perturbation Magnitude ($\epsilon$)', fontsize=10)
+    plt.ylabel('Model Accuracy (%)', fontsize=10)
+    plt.ylim(-5, 100)
+    plt.grid(True, linestyle='--', alpha=0.6)
+    plt.legend(frameon=True)
+    plt.tight_layout()
+    plt.savefig(os.path.join(RESULTS_DIR, 'pgd_comparison.png'))
+    plt.close()
+
+    print("Plots generated successfully!")
     pass
 
 
-def plot_training_history(history):
-    """
-    Plot training history (loss and accuracy over epochs).
+# def plot_training_history(history):
+#     """
+#     Plot training history (loss and accuracy over epochs).
 
-    Args:
-        history: dict with keys train_loss, train_acc, test_loss, test_acc, robust_acc
-    """
+#     Args:
+#         history: dict with keys train_loss, train_acc, test_loss, test_acc, robust_acc
+#     """
 
-    # TODO: Plot loss curves (train vs test)
-    # TODO: Plot accuracy curves (clean vs robust)
-    pass
+#     # TODO: Plot loss curves (train vs test)
+#     # TODO: Plot accuracy curves (clean vs robust)
+#     pass

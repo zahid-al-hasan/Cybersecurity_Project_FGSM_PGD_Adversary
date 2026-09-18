@@ -24,7 +24,7 @@ NUM_CHANNELS = 3
 # Training
 BATCH_SIZE = 128
 LEARNING_RATE = 0.001
-NUM_EPOCHS = 20
+NUM_EPOCHS = 10
 SEED = 406
 
 
@@ -41,7 +41,7 @@ FGSM_EPSILON = 0.03  # epsilon for FGSM (CIFAR-10 pixel range is [0,1])
 # PGD Attack
 PGD_EPSILON = 0.03
 PGD_ALPHA = 0.007    # step size
-PGD_STEPS = 10       # number of iterations
+PGD_STEPS = 8     # number of iterations
 PGD_RANDOM_START = True
 PGD_NUM_RESTARTS = 5
 
