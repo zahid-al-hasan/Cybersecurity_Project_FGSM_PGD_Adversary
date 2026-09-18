@@ -11,7 +11,6 @@ This is a fast but relatively weak attack.
 
 import torch
 from models.cnn import BaselineCNN
-from torch.optim import Adam
 from config import *
 from torch.nn import CrossEntropyLoss
 
@@ -32,34 +31,21 @@ def fgsm_attack(images, labels, model=None, optimizer=None, epsilon=FGSM_EPSILON
     """
     if model is None:
         model = BaselineCNN(num_classes=NUM_CLASSES)
-    if optimizer is None:
-        optimizer = Adam(model.parameters(), lr=LEARNING_RATE)
     if criterion is None:
         criterion = CrossEntropyLoss()
 
+    if epsilon < 0:
+        raise ValueError("epsilon must be non-negative")
 
-    # Set images to require gradient
     images = images.detach().requires_grad_(True)
+    was_training = model.training
+    model.eval()
 
-    # TODO: Forward pass - get model predictions
-    output = model.forward(images)
-
-    # TODO: Compute loss
-    loss = criterion(output, labels)
-
-    # TODO: Backward pass - compute gradients
-    optimizer.zero_grad()
-    loss.backward()
-    optimizer.step()
-
-    # TODO: Collect gradient of loss w.r.t. input images
-    gradient = images.grad
-
-    # TODO: Create adversarial example: x_adv = x + epsilon * sign(gradient)
-    grad_sign = gradient/abs(gradient) if gradient != 0 else 0
-    adv_images = images + epsilon * grad_sign
-
-    # TODO: Clip adversarial images to valid range [0, 1]
-    adv_images = torch.clamp(adv_images, 0, 1)
-
-    pass
+    try:
+        output = model(images)
+        loss = criterion(output, labels)
+        gradient = torch.autograd.grad(loss, images)[0]
+        adv_images = images + epsilon * gradient.sign()
+        return torch.clamp(adv_images.detach(), 0, 1)
+    finally:
+        model.train(was_training)
